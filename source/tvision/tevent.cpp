@@ -101,7 +101,7 @@ void TEventQueue::suspend() noexcept
 TEventQueue::~TEventQueue()
 {
     suspend();
-    delete pasteText;
+    delete[] pasteText;
     pasteText = 0;
 }
 
