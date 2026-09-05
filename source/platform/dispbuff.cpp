@@ -228,6 +228,8 @@ void DisplayBuffer::flushScreen(DisplayAdapter &display) noexcept
 
 inline void DisplayBuffer::validateCell(TScreenCell &cell) const noexcept
 {
+    if (cell.character.isWideCharTrail())
+        return;
     TStringView text = cell.character.getText();
     uchar c = text[0];
     if (c == '\0')
