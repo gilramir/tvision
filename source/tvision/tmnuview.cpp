@@ -563,9 +563,12 @@ TMenuItem *TMenuView::findHotKey( TMenuItem *p, TKey key )
             {
             if( p->command == 0 )
                 {
-                TMenuItem *T;
-                if( (T = findHotKey( p->subMenu->items, key )) != 0 )
-                    return T;
+                if( p->subMenu != 0 )
+                    {
+                    TMenuItem *T;
+                    if( (T = findHotKey( p->subMenu->items, key )) != 0 )
+                        return T;
+                    }
                 }
             else if( !p->disabled &&
                      p->keyCode != kbNoKey &&
