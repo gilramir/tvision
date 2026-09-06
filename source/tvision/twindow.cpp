@@ -215,6 +215,33 @@ void TWindow::sizeLimits( TPoint& min, TPoint& max )
     min = minWinSize;
 }
 
+static inline int range( int val, int min, int max )
+{
+    return val < min ? min : val > max ? max : val;
+}
+
+// zoomRect holds the bounds the window had when it was zoomed, in the owner's
+// coordinates and against the owner as it was at that moment. If the owner has
+// changed size since -- the terminal was resized while the window was
+// maximized -- restoring the rectangle verbatim can leave the window outside
+// it: locate() clamps the size against sizeLimits and takes the origin as
+// given, which is what its other callers need, since moveGrow() has already
+// done its own clamping and the Esc path deliberately restores bounds that may
+// hang off an edge. So reconcile the two here, where the stale rectangle is.
+//
+// The size is clamped first, the way locate() will, and the origin is then
+// slid back inside the owner; a window too large to fit is pinned at the
+// owner's origin rather than dragged negative.
+static TRect fittedToOwner( const TRect& r, TPoint minSize, TPoint maxSize,
+                            TPoint ownerSize )
+{
+    int w = range( r.b.x - r.a.x, minSize.x, maxSize.x );
+    int h = range( r.b.y - r.a.y, minSize.y, maxSize.y );
+    int x = range( r.a.x, 0, ownerSize.x - w < 0 ? 0 : ownerSize.x - w );
+    int y = range( r.a.y, 0, ownerSize.y - h < 0 ? 0 : ownerSize.y - h );
+    return TRect( x, y, x + w, y + h );
+}
+
 void TWindow::zoom()
 {
     TPoint minSize, maxSize;
@@ -226,7 +253,12 @@ void TWindow::zoom()
         locate(r);
         }
     else
-        locate( zoomRect );
+        {
+        TRect r = owner == 0 ? zoomRect
+                             : fittedToOwner( zoomRect, minSize, maxSize,
+                                              owner->size );
+        locate( r );
+        }
 }
 
 #if !defined(NO_STREAMABLE)
