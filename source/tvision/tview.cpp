@@ -120,6 +120,21 @@ static inline void fitToLimits( int a, int &b, int min, int max, int &balance)
     b = a + balancedRange( b - a, min, max, balance );
 }
 
+// A resize may change a view's size, but it must not leave the view outside
+// its owner. fitToLimits clamps the size and takes the origin as given, so a
+// relatively-grown origin -- or one left behind by a shrink -- can put the
+// whole view past the owner's edge. Slide it back; a view too big to fit is
+// pinned to the origin rather than dragged negative.
+static inline void fitToOwner( int &a, int &b, int ownerSize )
+{
+    int last = ownerSize - (b - a);
+    if( last < 0 )
+        last = 0;
+    int d = range( a, 0, last ) - a;
+    a += d;
+    b += d;
+}
+
 static inline void grow( TView *p, int s, int d, int &i )
 {
     if( p->growMode & gfGrowRel )
@@ -157,6 +172,17 @@ void TView::calcBounds( TRect& bounds, TPoint delta )
     sizeLimits( minLim, maxLim );
     fitToLimits( bounds.a.x, bounds.b.x, minLim.x, maxLim.x, resizeBalance.x );
     fitToLimits( bounds.a.y, bounds.b.y, minLim.y, maxLim.y, resizeBalance.y );
+
+    // Only on an axis the view actually grows on: a view that does not grow
+    // keeps the bounds it came in with, and moving it here would shove fixed
+    // controls around inside a shrinking window instead of clipping them.
+    if( owner != 0 && (growMode & gfFixed) == 0 )
+        {
+        if( (growMode & (gfGrowLoX | gfGrowHiX)) != 0 )
+            fitToOwner( bounds.a.x, bounds.b.x, owner->size.x );
+        if( (growMode & (gfGrowLoY | gfGrowHiY)) != 0 )
+            fitToOwner( bounds.a.y, bounds.b.y, owner->size.y );
+        }
 }
 
 void TView::changeBounds( const TRect& bounds )
